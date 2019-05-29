@@ -5,14 +5,14 @@ MIT: https://github.com/YouCanBookMe/react-datetime/raw/master/LICENSE
 */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("React"), require("moment"));
+		module.exports = factory(require("React"), require("moment"), require("ReactDOM"));
 	else if(typeof define === 'function' && define.amd)
-		define(["React", "moment"], factory);
+		define(["React", "moment", "ReactDOM"], factory);
 	else if(typeof exports === 'object')
-		exports["Datetime"] = factory(require("React"), require("moment"));
+		exports["Datetime"] = factory(require("React"), require("moment"), require("ReactDOM"));
 	else
-		root["Datetime"] = factory(root["React"], root["moment"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_12__, __WEBPACK_EXTERNAL_MODULE_16__) {
+		root["Datetime"] = factory(root["React"], root["moment"], root["ReactDOM"]);
+})(this, function(__WEBPACK_EXTERNAL_MODULE_12__, __WEBPACK_EXTERNAL_MODULE_16__, __WEBPACK_EXTERNAL_MODULE_23__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -66,7 +66,8 @@ return /******/ (function(modules) { // webpackBootstrap
 		createClass = __webpack_require__(11),
 		moment = __webpack_require__(16),
 		React = __webpack_require__(12),
-		CalendarContainer = __webpack_require__(17)
+		CalendarContainer = __webpack_require__(17),
+		onClickOutside = __webpack_require__(22).default
 		;
 
 	var viewModes = Object.freeze({
@@ -91,6 +92,7 @@ return /******/ (function(modules) { // webpackBootstrap
 			onNavigateForward: TYPES.func,
 			locale: TYPES.string,
 			utc: TYPES.bool,
+			displayTimeZone: TYPES.string,
 			input: TYPES.bool,
 			// dateFormat: TYPES.string | TYPES.bool,
 			// timeFormat: TYPES.string | TYPES.bool,
@@ -104,10 +106,12 @@ return /******/ (function(modules) { // webpackBootstrap
 			closeOnTab: TYPES.bool
 		},
 
-		getInitialState: function () {
-			var state = this.getStateFromProps(this.props);
+		getInitialState: function() {
+			this.checkTZ( this.props );
+			
+			var state = this.getStateFromProps( this.props );
 
-			if (state.open === undefined)
+			if ( state.open === undefined )
 				state.open = !this.props.input;
 
 			state.currentView = this.props.dateFormat ?
@@ -130,8 +134,8 @@ return /******/ (function(modules) { // webpackBootstrap
 			return parsedDate;
 		},
 
-		getStateFromProps: function (props) {
-			var formats = this.getFormats(props),
+		getStateFromProps: function( props ) {
+			var formats = this.getFormats( props ),
 				date = props.value || props.defaultValue,
 				selectedDate, viewDate, updateOn, inputValue
 				;
@@ -146,9 +150,9 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			updateOn = this.getUpdateOn(formats);
 
-			if (selectedDate)
+			if ( selectedDate )
 				inputValue = selectedDate.format(formats.datetime);
-			else if (date.isValid && !date.isValid())
+			else if ( date.isValid && !date.isValid() )
 				inputValue = '';
 			else
 				inputValue = date || '';
@@ -163,199 +167,196 @@ return /******/ (function(modules) { // webpackBootstrap
 			};
 		},
 
-		getUpdateOn: function (formats) {
-			if (formats.date.match(/[lLD]/)) {
+		getUpdateOn: function( formats ) {
+			if ( formats.date.match(/[lLD]/) ) {
 				return viewModes.DAYS;
-			} else if (formats.date.indexOf('M') !== -1) {
+			} else if ( formats.date.indexOf('M') !== -1 ) {
 				return viewModes.MONTHS;
-			} else if (formats.date.indexOf('Y') !== -1) {
+			} else if ( formats.date.indexOf('Y') !== -1 ) {
 				return viewModes.YEARS;
 			}
 
 			return viewModes.DAYS;
 		},
 
-		getFormats: function (props) {
+		getFormats: function( props ) {
 			var formats = {
-				date: props.dateFormat || '',
-				time: props.timeFormat || ''
-			},
-				locale = this.localMoment(props.date, null, props).localeData()
+					date: props.dateFormat || '',
+					time: props.timeFormat || ''
+				},
+				locale = this.localMoment( props.date, null, props ).localeData()
 				;
 
-			if (formats.date === true) {
+			if ( formats.date === true ) {
 				formats.date = locale.longDateFormat('L');
 			}
-			else if (this.getUpdateOn(formats) !== viewModes.DAYS) {
+			else if ( this.getUpdateOn(formats) !== viewModes.DAYS ) {
 				formats.time = '';
 			}
 
-			if (formats.time === true) {
+			if ( formats.time === true ) {
 				formats.time = locale.longDateFormat('LT');
 			}
 
 			formats.datetime = formats.date && formats.time ?
 				formats.date + ' ' + formats.time :
 				formats.date || formats.time
-				;
+			;
 
 			return formats;
 		},
 
-		componentWillReceiveProps: function (nextProps) {
-			var formats = this.getFormats(nextProps),
+		componentWillReceiveProps: function( nextProps ) {
+			var formats = this.getFormats( nextProps ),
 				updatedState = {}
-				;
+			;
 
-			if (nextProps.value !== this.props.value ||
-				formats.datetime !== this.getFormats(this.props).datetime) {
-				updatedState = this.getStateFromProps(nextProps);
+			if ( nextProps.value !== this.props.value ||
+				formats.datetime !== this.getFormats( this.props ).datetime ) {
+				updatedState = this.getStateFromProps( nextProps );
 			}
 
-			if (updatedState.open === undefined) {
-				if (typeof nextProps.open !== 'undefined') {
+			if ( updatedState.open === undefined ) {
+				if ( typeof nextProps.open !== 'undefined' ) {
 					updatedState.open = nextProps.open;
-				} else if (this.props.closeOnSelect && this.state.currentView !== viewModes.TIME) {
+				} else if ( this.props.closeOnSelect && this.state.currentView !== viewModes.TIME ) {
 					updatedState.open = false;
 				} else {
 					updatedState.open = this.state.open;
 				}
 			}
 
-			if (nextProps.viewMode !== this.props.viewMode) {
+			if ( nextProps.viewMode !== this.props.viewMode ) {
 				updatedState.currentView = nextProps.viewMode;
 			}
 
-			if (nextProps.locale !== this.props.locale) {
-				if (this.state.viewDate) {
-					var updatedViewDate = this.state.viewDate.clone().locale(nextProps.locale);
+			if ( nextProps.locale !== this.props.locale ) {
+				if ( this.state.viewDate ) {
+					var updatedViewDate = this.state.viewDate.clone().locale( nextProps.locale );
 					updatedState.viewDate = updatedViewDate;
 				}
-				if (this.state.selectedDate) {
-					var updatedSelectedDate = this.state.selectedDate.clone().locale(nextProps.locale);
+				if ( this.state.selectedDate ) {
+					var updatedSelectedDate = this.state.selectedDate.clone().locale( nextProps.locale );
 					updatedState.selectedDate = updatedSelectedDate;
-					updatedState.inputValue = updatedSelectedDate.format(formats.datetime);
+					updatedState.inputValue = updatedSelectedDate.format( formats.datetime );
 				}
 			}
 
-			if (nextProps.utc !== this.props.utc) {
-				if (nextProps.utc) {
-					if (this.state.viewDate)
+			if ( nextProps.utc !== this.props.utc || nextProps.displayTimeZone !== this.props.displayTimeZone ) {
+				if ( nextProps.utc ) {
+					if ( this.state.viewDate )
 						updatedState.viewDate = this.state.viewDate.clone().utc();
-					if (this.state.selectedDate) {
+					if ( this.state.selectedDate ) {
 						updatedState.selectedDate = this.state.selectedDate.clone().utc();
-						updatedState.inputValue = updatedState.selectedDate.format(formats.datetime);
+						updatedState.inputValue = updatedState.selectedDate.format( formats.datetime );
+					}
+				} else if ( nextProps.displayTimeZone ) {
+					if ( this.state.viewDate )
+						updatedState.viewDate = this.state.viewDate.clone().tz(nextProps.displayTimeZone);
+					if ( this.state.selectedDate ) {
+						updatedState.selectedDate = this.state.selectedDate.clone().tz(nextProps.displayTimeZone);
+						updatedState.inputValue = updatedState.selectedDate.tz(nextProps.displayTimeZone).format( formats.datetime );
 					}
 				} else {
-					if (this.state.viewDate)
+					if ( this.state.viewDate )
 						updatedState.viewDate = this.state.viewDate.clone().local();
-					if (this.state.selectedDate) {
+					if ( this.state.selectedDate ) {
 						updatedState.selectedDate = this.state.selectedDate.clone().local();
 						updatedState.inputValue = updatedState.selectedDate.format(formats.datetime);
 					}
 				}
 			}
 
-			if (nextProps.viewDate !== this.props.viewDate) {
+			if ( nextProps.viewDate !== this.props.viewDate ) {
 				updatedState.viewDate = moment(nextProps.viewDate);
 			}
-			//we should only show a valid date if we are provided a isValidDate function. Removed in 2.10.3
-			/*if (this.props.isValidDate) {
-				updatedState.viewDate = updatedState.viewDate || this.state.viewDate;
-				while (!this.props.isValidDate(updatedState.viewDate)) {
-					updatedState.viewDate = updatedState.viewDate.add(1, 'day');
-				}
-			}*/
-			this.setState(updatedState);
+
+			this.checkTZ( nextProps );
+
+			this.setState( updatedState );
 		},
 
-		onInputChange: function (e) {
+		onInputChange: function( e ) {
 			var value = e.target === null ? e : e.target.value,
-				localMoment = this.localMoment(value, this.state.inputFormat),
+				localMoment = this.localMoment( value, this.state.inputFormat ),
 				update = { inputValue: value }
 				;
 
-			if (localMoment.isValid() && !this.props.value) {
+			if ( localMoment.isValid() && !this.props.value ) {
 				update.selectedDate = localMoment;
 				update.viewDate = localMoment.clone().startOf('month');
 			} else {
 				update.selectedDate = null;
 			}
 
-			return this.setState(update, function () {
-				return this.props.onChange(localMoment.isValid() ? localMoment : this.state.inputValue);
+			return this.setState( update, function() {
+				return this.props.onChange( localMoment.isValid() ? localMoment : this.state.inputValue );
 			});
 		},
 
-		onInputKey: function (e) {
+		onInputKey: function( e ) {
 			if (e.key === 'Enter') {
 				this.props.onBlur(this.state.selectedDate || this.state.inputValue);
 				return this.closeCalendar();
 			}
 			
-			if (e.which === 9 && this.props.closeOnTab) {
+			if ( e.which === 9 && this.props.closeOnTab ) {
 				this.closeCalendar();
 			}
 		},
 
-		onInputBlur: function () {
-			if (!this.state.open) {
-				this.props.onBlur(this.state.selectedDate || this.state.inputValue);
-			}
-		},
-
-		showView: function (view) {
+		showView: function( view ) {
 			var me = this;
-			return function () {
-				me.state.currentView !== view && me.props.onViewModeChange(view);
+			return function() {
+				me.state.currentView !== view && me.props.onViewModeChange( view );
 				me.setState({ currentView: view });
 			};
 		},
 
-		setDate: function (type) {
+		setDate: function( type ) {
 			var me = this,
 				nextViews = {
 					month: viewModes.DAYS,
 					year: viewModes.MONTHS,
 				}
-				;
-			return function (e) {
+			;
+			return function( e ) {
 				me.setState({
-					viewDate: me.state.viewDate.clone()[type](parseInt(e.target.getAttribute('data-value'), 10)).startOf(type),
-					currentView: nextViews[type]
+					viewDate: me.state.viewDate.clone()[ type ]( parseInt(e.target.getAttribute('data-value'), 10) ).startOf( type ),
+					currentView: nextViews[ type ]
 				});
-				me.props.onViewModeChange(nextViews[type]);
+				me.props.onViewModeChange( nextViews[ type ] );
 			};
 		},
 
-		subtractTime: function (amount, type, toSelected) {
+		subtractTime: function( amount, type, toSelected ) {
 			var me = this;
-			return function () {
-				me.props.onNavigateBack(amount, type);
-				me.updateTime('subtract', amount, type, toSelected);
+			return function() {
+				me.props.onNavigateBack( amount, type );
+				me.updateTime( 'subtract', amount, type, toSelected );
 			};
 		},
 
-		addTime: function (amount, type, toSelected) {
+		addTime: function( amount, type, toSelected ) {
 			var me = this;
-			return function () {
-				me.props.onNavigateForward(amount, type);
-				me.updateTime('add', amount, type, toSelected);
+			return function() {
+				me.props.onNavigateForward( amount, type );
+				me.updateTime( 'add', amount, type, toSelected );
 			};
 		},
 
-		updateTime: function (op, amount, type, toSelected) {
+		updateTime: function( op, amount, type, toSelected ) {
 			var update = {},
 				date = toSelected ? 'selectedDate' : 'viewDate';
 
-			update[date] = this.state[date].clone()[op](amount, type);
+			update[ date ] = this.state[ date ].clone()[ op ]( amount, type );
 
-			this.setState(update);
+			this.setState( update );
 		},
 
 		allowedSetTime: ['hours', 'minutes', 'seconds', 'milliseconds'],
-		setTime: function (type, value) {
-			var index = this.allowedSetTime.indexOf(type) + 1,
+		setTime: function( type, value ) {
+			var index = this.allowedSetTime.indexOf( type ) + 1,
 				state = this.state,
 				date = (state.selectedDate || state.viewDate).clone(),
 				nextType
@@ -363,23 +364,23 @@ return /******/ (function(modules) { // webpackBootstrap
 
 			// It is needed to set all the time properties
 			// to not to reset the time
-			date[type](value);
+			date[ type ]( value );
 			for (; index < this.allowedSetTime.length; index++) {
 				nextType = this.allowedSetTime[index];
-				date[nextType](date[nextType]());
+				date[ nextType ]( date[nextType]() );
 			}
 
-			if (!this.props.value) {
+			if ( !this.props.value ) {
 				this.setState({
 					selectedDate: date,
-					inputValue: date.format(state.inputFormat)
+					inputValue: date.format( state.inputFormat )
 				});
 			}
-			this.props.onChange(date);
+			this.props.onChange( date );
 		},
 
-		updateSelectedDate: function (e, close) {
-			var target = e.target,
+		updateSelectedDate: function( e, close ) {
+			var target = e.currentTarget,
 				modifier = 0,
 				viewDate = this.state.viewDate,
 				currentDate = this.state.selectedDate || viewDate,
@@ -393,74 +394,97 @@ return /******/ (function(modules) { // webpackBootstrap
 					modifier = -1;
 
 				date = viewDate.clone()
-					.month(viewDate.month() + modifier)
-					.date(parseInt(target.getAttribute('data-value'), 10));
+					.month( viewDate.month() + modifier )
+					.date( parseInt( target.getAttribute('data-value'), 10 ) );
 			} else if (target.className.indexOf('rdtMonth') !== -1) {
 				date = viewDate.clone()
-					.month(parseInt(target.getAttribute('data-value'), 10))
-					.date(currentDate.date());
+					.month( parseInt( target.getAttribute('data-value'), 10 ) )
+					.date( currentDate.date() );
 			} else if (target.className.indexOf('rdtYear') !== -1) {
 				date = viewDate.clone()
-					.month(currentDate.month())
-					.date(currentDate.date())
-					.year(parseInt(target.getAttribute('data-value'), 10));
+					.month( currentDate.month() )
+					.date( currentDate.date() )
+					.year( parseInt( target.getAttribute('data-value'), 10 ) );
 			}
 
-			date.hours(currentDate.hours())
-				.minutes(currentDate.minutes())
-				.seconds(currentDate.seconds())
-				.milliseconds(currentDate.milliseconds());
+			date.hours( currentDate.hours() )
+				.minutes( currentDate.minutes() )
+				.seconds( currentDate.seconds() )
+				.milliseconds( currentDate.milliseconds() );
 
-			if (!this.props.value) {
-				var open = !(this.props.closeOnSelect && close);
-				if (!open) {
-					this.props.onBlur(date);
+			if ( !this.props.value ) {
+				var open = !( this.props.closeOnSelect && close );
+				if ( !open ) {
+					this.props.onBlur( date );
 				}
 
 				this.setState({
 					selectedDate: date,
 					viewDate: date.clone().startOf('month'),
-					inputValue: date.format(this.state.inputFormat),
+					inputValue: date.format( this.state.inputFormat ),
 					open: open
 				});
 			} else {
-				if (this.props.closeOnSelect && close) {
+				if ( this.props.closeOnSelect && close ) {
 					this.closeCalendar();
 				}
 			}
 
-			this.props.onChange(date);
+			this.props.onChange( date );
 		},
 
-		openCalendar: function (e) {
-			if (!this.state.open) {
-				this.setState({ open: true }, function () {
-					this.props.onFocus(e);
+		openCalendar: function( e ) {
+			if ( !this.state.open ) {
+				this.setState({ open: true }, function() {
+					this.props.onFocus( e );
 				});
 			}
 		},
 
-		closeCalendar: function () {
+		closeCalendar: function() {
 			this.setState({ open: false }, function () {
-				this.props.onBlur(this.state.selectedDate || this.state.inputValue);
+				this.props.onBlur( this.state.selectedDate || this.state.inputValue );
 			});
 		},
 
-		handleClickOutside: function () {
-			if (this.props.input && this.state.open && !this.props.open && !this.props.disableOnClickOutside) {
-				this.setState({ open: false }, function () {
-					this.props.onBlur(this.state.selectedDate || this.state.inputValue);
+		handleClickOutside: function() {
+			if ( this.props.input && this.state.open && this.props.open === undefined && !this.props.disableCloseOnClickOutside ) {
+				this.setState({ open: false }, function() {
+					this.props.onBlur( this.state.selectedDate || this.state.inputValue );
 				});
 			}
 		},
 
-		localMoment: function (date, format, props) {
+		onInputBlur: function () {
+			if (!this.state.open) {
+				this.props.onBlur(this.state.selectedDate || this.state.inputValue);
+			}
+		},
+
+		localMoment: function( date, format, props ) {
 			props = props || this.props;
-			var momentFn = props.utc ? moment.utc : moment;
-			var m = momentFn(date, format, props.strictParsing);
-			if (props.locale)
-				m.locale(props.locale);
+			var m = null;
+
+			if (props.utc) {
+				m = moment.utc(date, format, props.strictParsing);
+			} else if (props.displayTimeZone) {
+				m = moment.tz(date, format, props.displayTimeZone);
+			} else {
+				m = moment(date, format, props.strictParsing);
+			}
+
+			if ( props.locale )
+				m.locale( props.locale );
 			return m;
+		},
+
+		checkTZ: function( props ) {
+			var con = console;
+
+			if ( props.displayTimeZone && !this.tzWarning && !moment.tz ) {
+				this.tzWarning = true;
+				con && con.error('react-datetime: displayTimeZone prop with value "' + props.displayTimeZone +  '" is used but moment.js timezone is not loaded.');
+			}
 		},
 
 		componentProps: {
@@ -469,76 +493,108 @@ return /******/ (function(modules) { // webpackBootstrap
 			fromThis: ['setDate', 'setTime', 'showView', 'addTime', 'subtractTime', 'updateSelectedDate', 'localMoment', 'handleClickOutside']
 		},
 
-		getComponentProps: function () {
+		getComponentProps: function() {
 			var me = this,
-				formats = this.getFormats(this.props),
-				props = { dateFormat: formats.date, timeFormat: formats.time }
+				formats = this.getFormats( this.props ),
+				props = {dateFormat: formats.date, timeFormat: formats.time}
 				;
 
-			this.componentProps.fromProps.forEach(function (name) {
-				props[name] = me.props[name];
+			this.componentProps.fromProps.forEach( function( name ) {
+				props[ name ] = me.props[ name ];
 			});
-			this.componentProps.fromState.forEach(function (name) {
-				props[name] = me.state[name];
+			this.componentProps.fromState.forEach( function( name ) {
+				props[ name ] = me.state[ name ];
 			});
-			this.componentProps.fromThis.forEach(function (name) {
-				props[name] = me[name];
+			this.componentProps.fromThis.forEach( function( name ) {
+				props[ name ] = me[ name ];
 			});
 
 			return props;
 		},
 
-		render: function () {
+		overrideEvent: function( handler, action ) {
+			if ( !this.overridenEvents ) {
+				this.overridenEvents = {};
+			}
+
+			if ( !this.overridenEvents[handler] ) {
+				var me = this;
+				this.overridenEvents[handler] = function( e ) {
+					var result;
+					if ( me.props.inputProps && me.props.inputProps[handler] ) {
+						result = me.props.inputProps[handler]( e );
+					}
+					if ( result !== false ) {
+						action( e );
+					}
+				};
+			}
+
+			return this.overridenEvents[handler];
+		},
+
+		render: function() {
 			// TODO: Make a function or clean up this code,
 			// logic right now is really hard to follow
 			var className = 'rdt' + (this.props.className ?
-				(Array.isArray(this.props.className) ?
-					' ' + this.props.className.join(' ') : ' ' + this.props.className) : ''),
+										( Array.isArray( this.props.className ) ?
+										' ' + this.props.className.join( ' ' ) : ' ' + this.props.className) : ''),
 				children = [];
 
-			if (this.props.input) {
-				var finalInputProps = assign({
-					type: 'text',
-					className: 'form-control',
-					onClick: this.openCalendar,
-					onFocus: this.openCalendar,
-					onChange: this.onInputChange,
-					onKeyDown: this.onInputKey,
-					onBlur: this.onInputBlur,
-					value: this.state.inputValue,
-				}, this.props.inputProps);
-				if (this.props.renderInput) {
-					children = [React.createElement('div', { key: 'i' }, this.props.renderInput(finalInputProps, this.openCalendar, this.closeCalendar))];
+			if ( this.props.input ) {
+				var finalInputProps = assign(
+					{ type: 'text', className: 'form-control', value: this.state.inputValue },
+					this.props.inputProps,
+					{
+						onClick: this.overrideEvent( 'onClick', this.openCalendar ),
+						onFocus: this.overrideEvent( 'onFocus', this.openCalendar ),
+						onChange: this.overrideEvent( 'onChange', this.onInputChange ),
+						onKeyDown: this.overrideEvent( 'onKeyDown', this.onInputKey ),
+						onBlur: this.overrideEvent( 'onBlur', this.onInputBlur ),
+					}
+				);
+
+				if ( this.props.renderInput ) {
+					children = [ React.createElement('div', { key: 'i' }, this.props.renderInput( finalInputProps, this.openCalendar, this.closeCalendar )) ];
 				} else {
-					children = [React.createElement('input', assign({ key: 'i' }, finalInputProps))];
+					children = [ React.createElement('input', assign({ key: 'i' }, finalInputProps ))];
 				}
 			} else {
 				className += ' rdtStatic';
 			}
 
-			if (this.state.open)
+			if ( this.props.open || (this.props.open === undefined && this.state.open ) )
 				className += ' rdtOpen';
 
-			return React.createElement('div', { className: className }, children.concat(
-				React.createElement('div',
+			return React.createElement( ClickableWrapper, {className: className, onClickOut: this.handleClickOutside}, children.concat(
+				React.createElement( 'div',
 					{ key: 'dt', className: 'rdtPicker' },
-					React.createElement(CalendarContainer, { view: this.state.currentView, viewProps: this.getComponentProps(), onClickOutside: this.handleClickOutside })
+					React.createElement( CalendarContainer, { view: this.state.currentView, viewProps: this.getComponentProps() })
 				)
 			));
 		}
 	});
+
+	var ClickableWrapper = onClickOutside( createClass({
+		render: function() {
+			return React.createElement( 'div', { className: this.props.className }, this.props.children );
+		},
+		handleClickOutside: function( e ) {
+			this.props.onClickOut( e );
+		}
+	}));
 
 	Datetime.defaultProps = {
 		className: '',
 		defaultValue: '',
 		inputProps: {},
 		input: true,
-		onFocus: function () { },
-		onBlur: function () { },
-		onChange: function () { },
-		onViewModeChange: function () { },
-		onNavigateBack: function () { },
-		onNavigateForward: function () { },
+		onFocus: function() {},
+		onBlur: function() {},
+		onChange: function() {},
+		onViewModeChange: function() {},
+		onNavigateBack: function() {},
+		onNavigateForward: function() {},
 		timeFormat: true,
 		timeConstraints: {},
 		dateFormat: true,
@@ -552,7 +608,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	Datetime.moment = moment;
 
 	module.exports = Datetime;
-
 
 /***/ }),
 /* 1 */
@@ -3348,6 +3403,348 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	module.exports = DateTimePickerTime;
 
+
+/***/ }),
+/* 22 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+
+	exports.__esModule = true;
+	exports.IGNORE_CLASS_NAME = undefined;
+	exports.default = onClickOutsideHOC;
+
+	var _react = __webpack_require__(12);
+
+	var _reactDom = __webpack_require__(23);
+
+	var _generateOutsideCheck = __webpack_require__(24);
+
+	var _generateOutsideCheck2 = _interopRequireDefault(_generateOutsideCheck);
+
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+	/**
+	 * A higher-order-component for handling onClickOutside for React components.
+	 */
+	var registeredComponents = [];
+	var handlers = [];
+
+	var touchEvents = ['touchstart', 'touchmove'];
+	var IGNORE_CLASS_NAME = exports.IGNORE_CLASS_NAME = 'ignore-react-onclickoutside';
+
+	/**
+	 * This function generates the HOC function that you'll use
+	 * in order to impart onOutsideClick listening to an
+	 * arbitrary component. It gets called at the end of the
+	 * bootstrapping code to yield an instance of the
+	 * onClickOutsideHOC function defined inside setupHOC().
+	 */
+	function onClickOutsideHOC(WrappedComponent, config) {
+	  var _class, _temp2;
+
+	  return _temp2 = _class = function (_Component) {
+	    _inherits(onClickOutside, _Component);
+
+	    function onClickOutside() {
+	      var _temp, _this, _ret;
+
+	      _classCallCheck(this, onClickOutside);
+
+	      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+	        args[_key] = arguments[_key];
+	      }
+
+	      return _ret = (_temp = (_this = _possibleConstructorReturn(this, _Component.call.apply(_Component, [this].concat(args))), _this), _this.__outsideClickHandler = null, _this.enableOnClickOutside = function () {
+	        var fn = _this.__outsideClickHandler;
+	        if (fn && typeof document !== 'undefined') {
+	          var events = _this.props.eventTypes;
+	          if (!events.forEach) {
+	            events = [events];
+	          }
+
+	          events.forEach(function (eventName) {
+	            var handlerOptions = null;
+	            var isTouchEvent = touchEvents.indexOf(eventName) !== -1;
+
+	            if (isTouchEvent) {
+	              handlerOptions = { passive: !_this.props.preventDefault };
+	            }
+
+	            document.addEventListener(eventName, fn, handlerOptions);
+	          });
+	        }
+	      }, _this.disableOnClickOutside = function () {
+	        var fn = _this.__outsideClickHandler;
+	        if (fn && typeof document !== 'undefined') {
+	          var events = _this.props.eventTypes;
+	          if (!events.forEach) {
+	            events = [events];
+	          }
+	          events.forEach(function (eventName) {
+	            return document.removeEventListener(eventName, fn);
+	          });
+	        }
+	      }, _this.getRef = function (ref) {
+	        return _this.instanceRef = ref;
+	      }, _temp), _possibleConstructorReturn(_this, _ret);
+	    }
+
+	    /**
+	     * Access the WrappedComponent's instance.
+	     */
+	    onClickOutside.prototype.getInstance = function getInstance() {
+	      if (!WrappedComponent.prototype.isReactComponent) {
+	        return this;
+	      }
+	      var ref = this.instanceRef;
+	      return ref.getInstance ? ref.getInstance() : ref;
+	    };
+
+	    // this is given meaning in componentDidMount/componentDidUpdate
+
+
+	    /**
+	     * Add click listeners to the current document,
+	     * linked to this component's state.
+	     */
+	    onClickOutside.prototype.componentDidMount = function componentDidMount() {
+	      // If we are in an environment without a DOM such
+	      // as shallow rendering or snapshots then we exit
+	      // early to prevent any unhandled errors being thrown.
+	      if (typeof document === 'undefined' || !document.createElement) {
+	        return;
+	      }
+
+	      var instance = this.getInstance();
+
+	      if (config && typeof config.handleClickOutside === 'function') {
+	        this.__clickOutsideHandlerProp = config.handleClickOutside(instance);
+	        if (typeof this.__clickOutsideHandlerProp !== 'function') {
+	          throw new Error('WrappedComponent lacks a function for processing outside click events specified by the handleClickOutside config option.');
+	        }
+	      } else if (typeof instance.handleClickOutside === 'function') {
+	        if (_react.Component.prototype.isPrototypeOf(instance)) {
+	          this.__clickOutsideHandlerProp = instance.handleClickOutside.bind(instance);
+	        } else {
+	          this.__clickOutsideHandlerProp = instance.handleClickOutside;
+	        }
+	      } else if (typeof instance.props.handleClickOutside === 'function') {
+	        this.__clickOutsideHandlerProp = instance.props.handleClickOutside;
+	      } else {
+	        throw new Error('WrappedComponent lacks a handleClickOutside(event) function for processing outside click events.');
+	      }
+
+	      // TODO: try to get rid of this, could be done with function ref, might be problematic for SFC though, they do not expose refs
+	      if ((0, _reactDom.findDOMNode)(instance) === null) {
+	        return;
+	      }
+
+	      this.addOutsideClickHandler();
+	    };
+
+	    /**
+	    * Track for disableOnClickOutside props changes and enable/disable click outside
+	    */
+
+
+	    onClickOutside.prototype.componentWillReceiveProps = function componentWillReceiveProps(nextProps) {
+	      if (this.props.disableOnClickOutside && !nextProps.disableOnClickOutside) {
+	        this.enableOnClickOutside();
+	      } else if (!this.props.disableOnClickOutside && nextProps.disableOnClickOutside) {
+	        this.disableOnClickOutside();
+	      }
+	    };
+
+	    onClickOutside.prototype.componentDidUpdate = function componentDidUpdate() {
+	      var componentNode = (0, _reactDom.findDOMNode)(this.getInstance());
+
+	      if (componentNode === null && this.__outsideClickHandler) {
+	        this.removeOutsideClickHandler();
+	        return;
+	      }
+
+	      if (componentNode !== null && !this.__outsideClickHandler) {
+	        this.addOutsideClickHandler();
+	        return;
+	      }
+	    };
+
+	    /**
+	     * Remove all document's event listeners for this component
+	     */
+
+
+	    onClickOutside.prototype.componentWillUnmount = function componentWillUnmount() {
+	      this.removeOutsideClickHandler();
+	    };
+
+	    /**
+	     * Can be called to explicitly enable event listening
+	     * for clicks and touches outside of this element.
+	     */
+
+
+	    /**
+	     * Can be called to explicitly disable event listening
+	     * for clicks and touches outside of this element.
+	     */
+
+
+	    onClickOutside.prototype.addOutsideClickHandler = function addOutsideClickHandler() {
+	      var fn = this.__outsideClickHandler = (0, _generateOutsideCheck2.default)((0, _reactDom.findDOMNode)(this.getInstance()), this.__clickOutsideHandlerProp, this.props.outsideClickIgnoreClass, this.props.excludeScrollbar, this.props.preventDefault, this.props.stopPropagation);
+
+	      var pos = registeredComponents.length;
+	      registeredComponents.push(this);
+	      handlers[pos] = fn;
+
+	      // If there is a truthy disableOnClickOutside property for this
+	      // component, don't immediately start listening for outside events.
+	      if (!this.props.disableOnClickOutside) {
+	        this.enableOnClickOutside();
+	      }
+	    };
+
+	    onClickOutside.prototype.removeOutsideClickHandler = function removeOutsideClickHandler() {
+	      this.disableOnClickOutside();
+	      this.__outsideClickHandler = false;
+
+	      var pos = registeredComponents.indexOf(this);
+
+	      if (pos > -1) {
+	        // clean up so we don't leak memory
+	        if (handlers[pos]) {
+	          handlers.splice(pos, 1);
+	        }
+	        registeredComponents.splice(pos, 1);
+	      }
+	    };
+
+	    /**
+	     * Pass-through render
+	     */
+	    onClickOutside.prototype.render = function render() {
+	      var _this2 = this;
+
+	      var props = Object.keys(this.props).filter(function (prop) {
+	        return prop !== 'excludeScrollbar';
+	      }).reduce(function (props, prop) {
+	        props[prop] = _this2.props[prop];
+	        return props;
+	      }, {});
+
+	      if (WrappedComponent.prototype.isReactComponent) {
+	        props.ref = this.getRef;
+	      } else {
+	        props.wrappedRef = this.getRef;
+	      }
+
+	      props.disableOnClickOutside = this.disableOnClickOutside;
+	      props.enableOnClickOutside = this.enableOnClickOutside;
+
+	      return (0, _react.createElement)(WrappedComponent, props);
+	    };
+
+	    return onClickOutside;
+	  }(_react.Component), _class.displayName = 'OnClickOutside(' + (WrappedComponent.displayName || WrappedComponent.name || 'Component') + ')', _class.defaultProps = {
+	    eventTypes: ['mousedown', 'touchstart'],
+	    excludeScrollbar: config && config.excludeScrollbar || false,
+	    outsideClickIgnoreClass: IGNORE_CLASS_NAME,
+	    preventDefault: false,
+	    stopPropagation: false
+	  }, _class.getClass = function () {
+	    return WrappedComponent.getClass ? WrappedComponent.getClass() : WrappedComponent;
+	  }, _temp2;
+	}
+
+/***/ }),
+/* 23 */
+/***/ (function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_23__;
+
+/***/ }),
+/* 24 */
+/***/ (function(module, exports) {
+
+	"use strict";
+
+	exports.__esModule = true;
+	exports.default = generateOutsideCheck;
+	/**
+	 * Check whether some DOM node is our Component's node.
+	 */
+	function isNodeFound(current, componentNode, ignoreClass) {
+	  if (current === componentNode) {
+	    return true;
+	  }
+	  // SVG <use/> elements do not technically reside in the rendered DOM, so
+	  // they do not have classList directly, but they offer a link to their
+	  // corresponding element, which can have classList. This extra check is for
+	  // that case.
+	  // See: http://www.w3.org/TR/SVG11/struct.html#InterfaceSVGUseElement
+	  // Discussion: https://github.com/Pomax/react-onclickoutside/pull/17
+	  if (current.correspondingElement) {
+	    return current.correspondingElement.classList.contains(ignoreClass);
+	  }
+	  return current.classList.contains(ignoreClass);
+	}
+
+	/**
+	 * Try to find our node in a hierarchy of nodes, returning the document
+	 * node as highest node if our node is not found in the path up.
+	 */
+	function findHighest(current, componentNode, ignoreClass) {
+	  if (current === componentNode) {
+	    return true;
+	  }
+
+	  // If source=local then this event came from 'somewhere'
+	  // inside and should be ignored. We could handle this with
+	  // a layered approach, too, but that requires going back to
+	  // thinking in terms of Dom node nesting, running counter
+	  // to React's 'you shouldn't care about the DOM' philosophy.
+	  while (current.parentNode) {
+	    if (isNodeFound(current, componentNode, ignoreClass)) {
+	      return true;
+	    }
+	    current = current.parentNode;
+	  }
+	  return current;
+	}
+
+	/**
+	 * Check if the browser scrollbar was clicked
+	 */
+	function clickedScrollbar(evt) {
+	  return document.documentElement.clientWidth <= evt.clientX || document.documentElement.clientHeight <= evt.clientY;
+	}
+
+	/**
+	 * Generate the event handler that checks whether a clicked DOM node
+	 * is inside of, or lives outside of, our Component's node tree.
+	 */
+	function generateOutsideCheck(componentNode, eventHandler, ignoreClass, excludeScrollbar, preventDefault, stopPropagation) {
+	  return function (evt) {
+	    if (preventDefault) {
+	      evt.preventDefault();
+	    }
+	    if (stopPropagation) {
+	      evt.stopPropagation();
+	    }
+	    var current = evt.target;
+	    if (excludeScrollbar && clickedScrollbar(evt) || findHighest(current, componentNode, ignoreClass) !== document) {
+	      return;
+	    }
+	    eventHandler(evt);
+	  };
+	}
 
 /***/ })
 /******/ ])
